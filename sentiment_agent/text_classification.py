@@ -8,11 +8,12 @@ from tqdm.asyncio import tqdm_asyncio
 
 
 class TextClassificationAgent:
-    def __init__(self, base_url, api_key, model):
+    def __init__(self, base_url, api_key, model, domain, question_type):
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
-
+        self.domain = domain
+        self.question_type = question_type
         self.model_client = OpenAIChatCompletionClient(
             base_url=self.base_url,
             api_key=self.api_key,
@@ -29,8 +30,9 @@ class TextClassificationAgent:
         self.summary2label_agent = AssistantAgent(
             name="summary2label_agent",
             model_client=self.model_client,
-            system_message="""你是一个体验问题总结的专家，给定文本内容，请推理用户在生活服务方面可能存在哪些体验问题，请将相似问题进行合并分类，避免重复回答，输出结果为体验问题，请分条列点并用简要词汇概括。
-                                                            回答模板格式如下：体验问题：1.xx<sep>2.xx<sep>3.xx<sep>...<sep>N.xx""",
+            system_message="""你是一个{question_type}问题总结的专家，给定文本内容，请推理用户在{domain}领域可能存在哪些{question_type}问题，请将相似问题进行合并分类，避免重复回答，输出结果为{question_type}问题，请分条列点并用简要词汇概括。
+                                                            回答模板格式如下：{question_type}问题：1.xx<sep>2.xx<sep>3.xx<sep>...<sep>N.xx
+                                                            其中xx表示{question_type}问题，<sep>为分隔符。""".format(domain=self.domain, question_type=self.question_type),
         )
 
 
@@ -49,7 +51,7 @@ class TextClassificationAgent:
         print(','.join(response.split('<sep>')))
         self.class_labels = re.findall(r'\d{1,2}.(\w+)', ','.join(response.split('<sep>')), re.S) + ['其他问题']
 
-        self.text_classified_agent = AssistantAgent(
+        self.text_classification_agent = AssistantAgent(
             name="text_classified_agent",
             model_client=self.model_client,
             system_message="""你是一个体验问题分类的专家，给定多条文本内容，每条文本内容之间以符号<sep>作为分割符，已知体验问题标签集合为{}，请对每条文本内容分别判断所属的体验问题标签，且每条文本内容只能属于集合中的一个标签，输出结果为体验问题分类，请确保体验问题分类属于已知体验类别集合。
@@ -93,7 +95,7 @@ class TextClassificationAgent:
 
             task_message = "<sep>".join(self.classified_df[input_col].iloc[start_index: end_index])
 
-            result = await self.text_classified_agent.run(
+            result = await self.text_classification_agent.run(
                 task='\n\n'.join([num_prompt, label_prompt, task_message]))
 
             response = result.messages[-1].content

@@ -10,10 +10,12 @@ from .utils import get_classified_summary
 
 
 class TextSummaryAgent:
-    def __init__(self, base_url, api_key, model):
+    def __init__(self, base_url, api_key, model, domain, question_type):
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
+        self.domain = domain
+        self.question_type = question_type
         self.model_client = OpenAIChatCompletionClient(
             base_url=self.base_url,
             api_key=self.api_key,
@@ -30,9 +32,9 @@ class TextSummaryAgent:
         self.text_summary_agent = AssistantAgent(
             name="text_summary_agent",
             model_client=self.model_client,
-            system_message="""你是一个体验问题分析的专家，给定体验问题和文本内容，请推理用户在生活服务方面存在该体验问题背后的原因，输出结果为推理原因，其中推理原因为分条列点回答对应的判断依据。
-                                    回答模板格式如下：推理原因：1.yy,2.yy,3.yy,...,N.yy
-                                    其中yy表示对应的判断依据。""",
+            system_message="""你是一个{domain}领域{question_type}问题分析的专家，给定{question_type}问题和文本内容，请推理用户在{domain}领域存在该{question_type}问题背后的原因，输出结果为推理原因，其中推理原因为分条列点回答对应的判断依据。
+                                    回答模板格式如下：推理原因：1.yy<sep>2.yy<sep>3.yy<sep>...<sep>N.yy
+                                    其中yy表示对应的判断依据，<sep>为分隔符。""".format(domain=self.domain, question_type=self.question_type),
         )
 
     async def batch_run(self, df, input_col):
@@ -100,18 +102,17 @@ class TextSummaryAgent:
 
             response = result.messages[-1].content
 
-            if "推理原因：" in response:
-                error_answer = False
-
-            elif "推理原因：" not in response:
+            if "推理原因：" not in response:
                 omit_prompt = '''输出结果相比回答模板格式存在遗漏，请检查确保回答内容完整。
-                        回答模板格式如下：推理原因：1.yy,2.yy,3.yy,...,N.yy
-                        其中yy表示对应的判断依据。"""
+                        回答模板格式如下：推理原因：1.yy<sep>2.yy<sep>3.yy<sep>...<sep>N.yy
+                        其中yy表示对应的判断依据，<sep>为分隔符。
                         请重新输出结果，确保输出完整内容，且结果格式与模板格式一致。'''
                 print("第{}类分析存在回答遗漏错误，将重新进行分析".format(i + 1))
                 continue
+            else:
+                error_answer = False
 
         answer = re.findall(r"推理原因：(.*)", response, re.S)
-        self.classified_summary.loc[i, "推理原因"] = answer[0].strip()
+        self.classified_summary.loc[i, "推理原因"] = ','.join(answer[0].strip().split('<sep>'))
 
         return self.classified_summary
