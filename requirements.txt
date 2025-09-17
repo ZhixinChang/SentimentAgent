@@ -1,0 +1,9 @@
+autogen_agentchat==0.7.4
+autogen_core==0.7.4
+autogen_ext==0.7.4
+jieba==0.42.1
+matplotlib==3.10.6
+numpy==2.3.3
+pandas==2.3.2
+scikit_learn==1.7.2
+tqdm==4.67.1

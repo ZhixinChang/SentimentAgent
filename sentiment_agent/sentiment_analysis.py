@@ -8,10 +8,12 @@ from tqdm.asyncio import tqdm_asyncio
 
 
 class SentimentAnalysisAgent:
-    def __init__(self, base_url, api_key, model):
+    def __init__(self, base_url, api_key, model, domain, question_type):
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
+        self.domain = domain
+        self.question_type = question_type
         self.model_client = OpenAIChatCompletionClient(
             base_url=self.base_url,
             api_key=self.api_key,
@@ -28,9 +30,9 @@ class SentimentAnalysisAgent:
         self.sentiment_analysis_agent = AssistantAgent(
             name="sentiment_analysis_agent",
             model_client=self.model_client,
-            system_message="""你是一个情感分析的专家，给定多条文本内容，每条文本内容之间以符号<sep>作为分割符，请对每条文本内容分别判断用户对礼物特效的情感倾向，输出结果为情感分，取值范围为[0,10]，其中[0,3]为负向、(3,6]为中性、(6,10]为正向。
+            system_message="""你是一个{domain}领域的情感分析的专家，给定多条文本内容，每条文本内容之间以符号<sep>作为分割符，请对每条文本内容分别判断用户在{domain}领域对{question_type}问题的情感倾向，输出结果为情感分，取值范围为[0,10]，其中[0,3]为负向、(3,6]为中性、(6,10]为正向。
                                                                     回答模板格式如下：xx<sep>xx<sep>xx<sep>...<sep>xx
-                                                                    其中xx表示取值范围为[0,10]的情感分，<sep>为分隔符。""", )
+                                                                    其中xx表示取值范围为[0,10]的情感分，<sep>为分隔符。""".format(domain=self.domain, question_type=self.question_type), )
 
     async def batch_run(self, df, batch_size=30, input_col: str = 'content',
                         output_col: str = 'score'):

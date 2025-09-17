@@ -1,15 +1,29 @@
 [project]
 name = "SentimentAgent"
 version = "0.1.0"
-description = "Default template for PDM package"
+description = "A sentiment analysis agent based on user text, achieving quantitative summarization from user text to specific problems."
 authors = [
     {name = "ZhixinChang", email = "1070989486@qq.com"},
 ]
-dependencies = []
-requires-python = "==3.13.*"
+dependencies = [
+    "autogen-agentchat==0.7.4",
+    "autogen-core==0.7.4",
+    "autogen-ext==0.7.4",
+    "jieba==0.42.1",
+    "matplotlib==3.10.6",
+    "numpy==2.3.3",
+    "pandas==2.3.2",
+    "scikit-learn==1.7.2",
+    "tqdm==4.67.1",
+]
+requires-python = ">=3.13"
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 
 
 [tool.pdm]
-distribution = false
+distribution = true
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
