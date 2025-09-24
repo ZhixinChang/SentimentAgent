@@ -22,7 +22,7 @@ SentimentAgent is specifically designed for data analysis, focusing on processin
 
 - **Conclusion summary**. SentimentAgent can summarize all problem names, data proportions, and specific problem descriptions, and prioritize them according to their proportional sizes, simplifying the information processing cost of data analysis.
 
-### Workflow
+### Workflows
 - **SentimentAnalysisAgent**: Specifically responsible for sentiment analysis of text and providing data quantification of sentiment scores.
 
 - **TextPreClassificationAgent**: Specifically responsible for pre classifying text to reduce costs for formal text classification.
