@@ -68,7 +68,7 @@ class TextClassificationAgent:
             elif human_feedback.startswith('n'):
                 human_prompt = human_feedback.split('<sep>')[-1]
 
-            elif bool(re.fullmatch(r'(\d{1,}.\w+){' + r'{}'.format(
+            elif bool(re.fullmatch(r'(\d{1,}.\w+,){' + r'{}'.format(
                     len(human_feedback.strip().strip('<sep>').split('<sep>')) - 1) + r'}(\d{1,}.\w+)',
                                    ','.join(human_feedback.strip().strip('<sep>').split('<sep>')))):
                 custom_labels = re.findall(r'\d{1,}.(\w+)',
