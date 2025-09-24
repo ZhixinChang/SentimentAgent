@@ -53,7 +53,7 @@ To avoid issues with data privacy, we pre simulated and generated user feedback 
 ```python
 domain='酒店'
 question_type='居住质量'
-input_col = 'content'
+content_col = 'content'
 
 df = get_simulated_data_by_llm()
 df.head()
