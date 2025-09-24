@@ -37,8 +37,8 @@ class TextSummaryAgent:
                                     其中yy表示对应的判断依据，<sep>为分隔符。""".format(domain=self.domain, question_type=self.question_type),
         )
 
-    async def batch_run(self, df, input_col):
-        self.classified_df, self.classified_summary = get_classified_summary(df, input_col)
+    async def batch_run(self, classified_df, content_col, sentiment_col=None, classified_col='class'):
+        self.classified_df, self.classified_summary = get_classified_summary(classified_df, sentiment_col, classified_col)
 
         start_tag = self.classified_summary[self.classified_summary['推理原因'] == ''].index.min()
         end_tag = self.classified_summary[self.classified_summary['推理原因'] == ''].index.max() + 1
@@ -46,19 +46,19 @@ class TextSummaryAgent:
             index_list = list(range(start_tag, end_tag))
 
         pbar = tqdm_asyncio(total=len(self.classified_summary[self.classified_summary['推理原因'] == '']),
-                            desc="补全进度")
+                            desc="text summary complete progress")
         for i in index_list:
-            await self.run(self.classified_df, self.classified_summary, i, input_col)
+            await self.run(self.classified_df, self.classified_summary, i, content_col, classified_col)
             pbar.update(1)
 
         pbar.close()
-        print("所有项目处理完成")
+        print("text summary completion completed")
 
         return self.classified_summary
 
-    async def run(self, df, df_summary, i, input_col):
-        self.classified_df = df.copy()
-        self.classified_summary = df_summary.copy()
+    async def run(self, classified_df, classified_summary, i, content_col, classified_col):
+        self.classified_df = classified_df.copy()
+        self.classified_summary = classified_summary.copy()
         error_answer = True
         omit_prompt = ''
 
@@ -66,36 +66,36 @@ class TextSummaryAgent:
             if (
                     len(
                         self.classified_df[
-                            self.classified_df[input_col]
-                            == self.classified_summary.loc[i, input_col]
+                            self.classified_df[classified_col]
+                            == self.classified_summary.loc[i, classified_col]
                         ]
                     )
                     > 500
             ):
                 task_message = (
                         "体验问题为："
-                        + self.classified_summary.loc[i, input_col]
+                        + self.classified_summary.loc[i, classified_col]
                         + "。"
                         + "\n相关文本内容为："
                         + "\n".join(
                     self.classified_df[
-                        self.classified_df[input_col]
-                        == self.classified_summary.loc[i, input_col]
-                        ]["prompt"].sample(n=500, random_state=1, replace=False)
+                        self.classified_df[classified_col]
+                        == self.classified_summary.loc[i, classified_col]
+                        ][content_col].sample(n=500, random_state=1, replace=False)
                 )
                 )
                 print("第{}类分析，文本量过大，已抽样500条".format(i))
             else:
                 task_message = (
                         "体验问题为："
-                        + self.classified_summary.loc[i, input_col]
+                        + self.classified_summary.loc[i, classified_col]
                         + "。"
                         + "\n相关文本内容为："
                         + "\n".join(
                     self.classified_df[
-                        self.classified_df[input_col]
-                        == self.classified_summary.loc[i, input_col]
-                        ]["prompt"]
+                        self.classified_df[classified_col]
+                        == self.classified_summary.loc[i, classified_col]
+                        ][content_col]
                 )
                 )
             result = await self.text_summary_agent.run(task='\n\n'.join([omit_prompt, task_message]))

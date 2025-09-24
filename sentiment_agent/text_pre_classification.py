@@ -34,33 +34,35 @@ class TextPreClassificationAgent:
             model_client=self.model_client,
             system_message="""你是一个{domain}领域{question_type}问题分析的专家，给定文本内容，请推理用户在{domain}领域可能存在哪些{question_type}问题，输出结果为{question_type}问题和推理原因，其中{question_type}问题为分条列点的简要词汇概括，推理原因为分条列点回答对应的判断依据。
                             回答模板格式如下：{question_type}问题：1.xx<sep0>2.xx<sep0>3.xx<sep0>...<sep0>N.xx<sep1>推理原因：1.yy<sep0>2.yy<sep0>3.yy<sep0>...<sep0>N.yy
-                            其中xx表示简要词汇概括，yy表示对应的判断依据，<sep0>和<sep1>为分隔符。""".format(domain=self.domain, question_type=self.question_type),
+                            其中xx表示{question_type}问题，yy表示对应的推理原因，<sep0>和<sep1>为分隔符。""".format(
+                domain=self.domain, question_type=self.question_type),
         )
 
-    async def batch_run(self, df, input_col, pre_cluster_num=20, score_col=None):
+    async def batch_run(self, negative_sentiment_df, content_col, pre_cluster_num=20, sentiment_col=None):
 
-        self.pre_classified_df, self.pre_classified_summary = pre_classified_fit(df, input_col, pre_cluster_num, score_col)
+        self.pre_classified_df, self.pre_classified_summary = pre_classified_fit(negative_sentiment_df, content_col,
+                                                                                 pre_cluster_num, sentiment_col)
         start_tag = self.pre_classified_summary[self.pre_classified_summary['体验问题'] == ''].index.min()
         end_tag = self.pre_classified_summary[self.pre_classified_summary['体验问题'] == ''].index.max() + 1
         if not np.isnan(start_tag):
             index_list = list(range(start_tag, end_tag))
 
         pbar = tqdm_asyncio(total=len(self.pre_classified_summary[self.pre_classified_summary['体验问题'] == '']),
-                            desc="补全进度")
+                            desc="text pre classification complete progress")
         for cluster in index_list:
             self.pre_classified_summary = await self.run(self.pre_classified_df, self.pre_classified_summary, cluster,
-                                                         input_col)
+                                                         content_col)
             pbar.update(1)
 
         pbar.close()
-        print("所有项目处理完成")
+        print("text pre classification completion completed")
 
         return self.pre_classified_summary
 
-    async def run(self, df, df_summary, cluster, input_col):
+    async def run(self, pre_classified_df, pre_classified_summary, cluster, content_col):
 
-        self.pre_classified_df = df.copy()
-        self.pre_classified_summary = df_summary.copy()
+        self.pre_classified_df = pre_classified_df.copy()
+        self.pre_classified_summary = pre_classified_summary.copy()
 
         error_answer = True
         omit_prompt = ''
@@ -69,15 +71,15 @@ class TextPreClassificationAgent:
 
         while error_answer:
 
-            if len(self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][input_col]) > 100:
+            if len(self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][content_col]) > 100:
                 print("第{}类分析，文本量过大，已抽样100条".format(cluster))
                 task_message = "\n".join(
-                    self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][input_col].sample(n=100,
-                                                                                                           random_state=1,
-                                                                                                           replace=False))
+                    self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][content_col].sample(n=100,
+                                                                                                             random_state=1,
+                                                                                                             replace=False))
             else:
                 task_message = "\n".join(
-                    self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][input_col])
+                    self.pre_classified_df[self.pre_classified_df['cluster'] == cluster][content_col])
 
             result = await self.text_pre_classification_agent.run(
                 task='\n\n'.join([omit_prompt, sep_prompt, num_prompt, task_message]))

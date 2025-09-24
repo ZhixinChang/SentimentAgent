@@ -34,39 +34,39 @@ class SentimentAnalysisAgent:
                                                                     回答模板格式如下：xx<sep>xx<sep>xx<sep>...<sep>xx
                                                                     其中xx表示取值范围为[0,10]的情感分，<sep>为分隔符。""".format(domain=self.domain, question_type=self.question_type), )
 
-    async def batch_run(self, df, batch_size=30, input_col: str = 'content',
-                        output_col: str = 'score'):
+    async def batch_run(self, sentiment_df, batch_size=30, content_col: str = 'content',
+                        sentiment_col: str = 'score'):
 
-        self.sentiment_df = df.copy()
-        start_tag = self.sentiment_df[self.sentiment_df[output_col] == ''].index.min()
-        end_tag = self.sentiment_df[self.sentiment_df[output_col] == ''].index.max() + 1
+        self.sentiment_df = sentiment_df.copy()
+        start_tag = self.sentiment_df[self.sentiment_df[sentiment_col] == ''].index.min()
+        end_tag = self.sentiment_df[self.sentiment_df[sentiment_col] == ''].index.max() + 1
 
         if not np.isnan(start_tag):
             index_list = list(range(start_tag, end_tag, batch_size))
             index_list.append(end_tag)
 
-        pbar = tqdm_asyncio(total=len(self.sentiment_df[self.sentiment_df[output_col] == '']),
-                            desc="补全进度")
+        pbar = tqdm_asyncio(total=len(self.sentiment_df[self.sentiment_df[sentiment_col] == '']),
+                            desc="sentiment analysis complete progress")
         for i in range(len(index_list) - 1):
             start_index = index_list[i]
             end_index = index_list[i + 1]
-            self.sentiment_df = await self.run(self.sentiment_df, start_index, end_index, input_col,
-                                               output_col)
+            self.sentiment_df = await self.run(self.sentiment_df, start_index, end_index, content_col,
+                                               sentiment_col)
             pbar.update(end_index - start_index)
 
         pbar.close()
-        print("所有项目处理完成")
+        print("sentiment analysis completion completed")
 
         return self.sentiment_df
 
-    async def run(self, df, start_index, end_index, input_col: str = 'content',
-                  output_col: str = 'score'):
-        self.sentiment_df = df.copy()
+    async def run(self, sentiment_df, start_index, end_index, content_col: str = 'content',
+                  sentiment_col: str = 'score'):
+        self.sentiment_df = sentiment_df.copy()
         error_answer = True
         num_prompt = ''
         dtype_prompt = ''
 
-        task_message = "<sep>".join(self.sentiment_df[input_col].iloc[start_index: end_index])
+        task_message = "<sep>".join(self.sentiment_df[content_col].iloc[start_index: end_index])
         while error_answer:
 
             result = await self.sentiment_analysis_agent.run(task='\n\n'.join([num_prompt, dtype_prompt, task_message]))
@@ -102,7 +102,7 @@ class SentimentAnalysisAgent:
             else:
                 error_answer = False
 
-        self.sentiment_df.loc[start_index: end_index - 1, output_col] = response.strip().strip('<sep>').split(
+        self.sentiment_df.loc[start_index: end_index - 1, sentiment_col] = response.strip().strip('<sep>').split(
             '<sep>')
 
         return self.sentiment_df
