@@ -1,9 +1,9 @@
 # SentimentAgent
-[![License][license-badge]][license-url]
+[![GitHub license][license-badge]][license-url]
 [![Python Versions][python-badge]][pypi-url]
 
 [license-badge]: https://img.shields.io/badge/license-Apache%202.0-green
-[license-url]: https://www.apache.org/licenses/LICENSE-2.0
+[license-url]: https://github.com/ZhixinChang/SentimentAgent/blob/main/LICENSE
 
 [python-badge]: https://img.shields.io/badge/python-3.13-blue
 [pypi-url]: https://pypi.org/project/sentiment_agent/
